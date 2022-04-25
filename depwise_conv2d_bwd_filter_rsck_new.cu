@@ -1,14 +1,14 @@
 #include <cub/cub.cuh>
 #include <iostream>
 
-#define checkCUDA(expression)                                                  \
-  {                                                                            \
-    cudaError_t status = (expression);                                         \
-    if (status != cudaSuccess) {                                               \
-      std::cerr << "Error on line " << __LINE__ << ": "                        \
-                << cudaGetErrorString(status) << std::endl;                    \
-      std::exit(EXIT_FAILURE);                                                 \
-    }                                                                          \
+#define checkCUDA(expression)                               \
+  {                                                         \
+    cudaError_t status = (expression);                      \
+    if (status != cudaSuccess) {                            \
+      std::cerr << "Error on line " << __LINE__ << ": "     \
+                << cudaGetErrorString(status) << std::endl; \
+      std::exit(EXIT_FAILURE);                              \
+    }                                                       \
   }
 
 struct DepthwiseArgs {
@@ -21,8 +21,8 @@ struct DepthwiseArgs {
   int filter_cols;
   int depth_multiplier;
   int stride;
-  int pad_rows; // Amount of padding to the top of the input
-  int pad_cols; // Amount of padding to the left of the input
+  int pad_rows;  // Amount of padding to the top of the input
+  int pad_cols;  // Amount of padding to the left of the input
 
   // Output layer dimensions
   int out_rows;
@@ -30,12 +30,23 @@ struct DepthwiseArgs {
   int out_depth;
 
   DepthwiseArgs()
-      : batch(0), in_rows(0), in_cols(0), in_depth(0), filter_rows(0),
-        filter_cols(0), depth_multiplier(0), stride(0), pad_rows(0),
-        pad_cols(0), out_rows(0), out_cols(0), out_depth(0) {}
+      : batch(0),
+        in_rows(0),
+        in_cols(0),
+        in_depth(0),
+        filter_rows(0),
+        filter_cols(0),
+        depth_multiplier(0),
+        stride(0),
+        pad_rows(0),
+        pad_cols(0),
+        out_rows(0),
+        out_cols(0),
+        out_depth(0) {}
 };
 
-template <typename T> class GpuGridRange {
+template <typename T>
+class GpuGridRange {
   struct Iterator {
     __device__ Iterator(T index, T delta) : index_(index), delta_(delta) {}
     __device__ T operator*() const { return index_; }
@@ -57,35 +68,38 @@ template <typename T> class GpuGridRange {
       return less || greater;
     }
 
-  private:
+   private:
     T index_;
     const T delta_;
   };
 
-public:
+ public:
   __device__ GpuGridRange(T begin, T delta, T end)
       : begin_(begin), delta_(delta), end_(end) {}
 
   __device__ Iterator begin() const { return Iterator{begin_, delta_}; }
   __device__ Iterator end() const { return Iterator{end_, 0}; }
 
-private:
+ private:
   T begin_;
   T delta_;
   T end_;
 };
 
-template <typename T> __device__ GpuGridRange<T> GpuGridRangeX(T count) {
+template <typename T>
+__device__ GpuGridRange<T> GpuGridRangeX(T count) {
   return GpuGridRange<T>(
       /*begin=*/blockIdx.x * blockDim.x + threadIdx.x,
       /*delta=*/gridDim.x * blockDim.x, /*end=*/count);
 }
 
-template <typename T> __host__ __device__ T GpuLdg(const T *address) {
+template <typename T>
+__host__ __device__ T GpuLdg(const T *address) {
   return __ldg(address);
 }
 
-template <typename T> __host__ __device__ inline T ldg(const T *ptr) {
+template <typename T>
+__host__ __device__ inline T ldg(const T *ptr) {
   return GpuLdg(ptr);
 }
 
@@ -93,7 +107,10 @@ template <typename T> __host__ __device__ inline T ldg(const T *ptr) {
 #define UNROLL _Pragma("unroll")
 #define NOUNROLL _Pragma("nounroll")
 
-template <typename T> struct CudaSupportedTypeImpl { using type = T; };
+template <typename T>
+struct CudaSupportedTypeImpl {
+  using type = T;
+};
 
 template <typename T>
 using CudaSupportedType = typename CudaSupportedTypeImpl<T>::type;
@@ -146,7 +163,8 @@ __global__ void __launch_bounds__(512, 2)
   const int dm = out_c % depth_multiplier;
   const int filter_backprop_offset =
       (((filter_h * filter_width) + filter_w) * in_depth + in_c) *
-      depth_multiplier + dm;
+          depth_multiplier +
+      dm;
   const int out_spatial_size = out_height * out_width;
 
   T partial_sum = 0.;
@@ -182,7 +200,8 @@ __global__ void __launch_bounds__(512, 2)
   }
 }
 
-template <typename T> void init_array(T *dev_ptr, int n) {
+template <typename T>
+void init_array(T *dev_ptr, int n) {
   T *host_ptr = new T[n];
   for (int i = 0; i < n; i++) {
     host_ptr[i] = 0.1;
@@ -192,7 +211,8 @@ template <typename T> void init_array(T *dev_ptr, int n) {
   delete[] host_ptr;
 }
 
-template <typename T> void init_array(T *dev_ptr, int n, float v) {
+template <typename T>
+void init_array(T *dev_ptr, int n, float v) {
   T *host_ptr = new T[n];
   for (int i = 0; i < n; i++) {
     host_ptr[i] = v;
@@ -210,8 +230,7 @@ void print_array(T *dev_ptr, int n, const std::string &prompt) {
       cudaMemcpy(host_ptr, dev_ptr, sizeof(T) * n, cudaMemcpyDeviceToHost));
   for (int i = 0; i < n; i++) {
     printf("%f, ", static_cast<float>(host_ptr[i]));
-    if ((i + 1) % 10 == 0)
-      break;
+    if ((i + 1) % 10 == 0) break;
   }
   printf("\n");
   delete[] host_ptr;
@@ -220,7 +239,6 @@ void print_array(T *dev_ptr, int n, const std::string &prompt) {
 inline int DivUp(int a, int b) { return (a + b - 1) / b; }
 
 int main(int argc, char **argv) {
-
   int dargs[13] = {3, 128, 128, 144, 3, 3, 1, 1, 1, 1, 128, 128, 144};
 
   if (argc > 6) {
@@ -238,9 +256,8 @@ int main(int argc, char **argv) {
     dargs[6] = atoi(argv[7]);
     dargs[12] = atoi(argv[8]);
   }
-  printf("XXX N,H,W,C,R,S,Multipler,K: %d %d %d %d %d %d %d %d\n",
-         dargs[0], dargs[1], dargs[2], dargs[3], dargs[4], dargs[5], dargs[6],
-         dargs[12]);
+  printf("XXX N,H,W,C,R,S,Multipler,K: %d %d %d %d %d %d %d %d\n", dargs[0],
+         dargs[1], dargs[2], dargs[3], dargs[4], dargs[5], dargs[6], dargs[12]);
 
   DepthwiseArgs args;
   args.batch = dargs[0];
@@ -260,7 +277,8 @@ int main(int argc, char **argv) {
   int num_out_backprop =
       args.batch * args.out_depth * args.out_rows * args.out_cols;
   int num_input = args.batch * args.in_depth * args.in_rows * args.in_cols;
-  int num_filter_backprop = args.in_depth * args.filter_rows * args.filter_cols * args.depth_multiplier;
+  int num_filter_backprop = args.in_depth * args.filter_rows *
+                            args.filter_cols * args.depth_multiplier;
 
   int out_backprop_bytes = sizeof(float) * num_out_backprop;
   int input_bytes = sizeof(float) * num_input;
