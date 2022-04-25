@@ -154,8 +154,8 @@ __global__ void __launch_bounds__(512, 2)
       const int out_col = i % out_width;
       const int out_row = i / out_width;
       // We use the formula: `(in_row - filter_w + pad_left ) / stride =
-      // out_row` to compute associated in_row and out_row. Similar for in_col
-      // and out_col.
+      // out_row` to compute corresponding in_row and out_row positions. Similar
+      // for in_col and out_col.
       const int in_row = out_row * stride_height + filter_h - pad_height;
       const int in_col = out_col * stride_width + filter_w - pad_width;
 
