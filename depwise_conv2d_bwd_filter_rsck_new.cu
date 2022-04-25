@@ -120,7 +120,7 @@ __global__ void __launch_bounds__(512, 2)
                                         const T *__restrict__ input,
                                         T *__restrict__ filter_backprop) {
   const int batch_num = args.batch;
-  const int in_channel = args.in_depth;
+  const int in_depth = args.in_depth;
   const int in_height = args.in_rows;
   const int in_width = args.in_cols;
   const int filter_width = args.filter_cols;
@@ -128,28 +128,32 @@ __global__ void __launch_bounds__(512, 2)
   const int stride_width = args.stride;
   const int pad_height = args.pad_rows;
   const int pad_width = args.pad_cols;
-  const int out_channel = args.out_depth;
+  const int out_depth = args.out_depth;
   const int out_height = args.out_rows;
   const int out_width = args.out_cols;
+  const int depth_multiplier = args.depth_multiplier;
+  assert(gridDim.x == filter_width);
+  assert(gridDim.z == out_depth);
 
   typedef cub::WarpReduce<T> WarpReduce;
   typename WarpReduce::TempStorage temp_storage;
 
-  T partial_sum = 0.;
-
   const int filter_w = blockIdx.x;
   const int filter_h = blockIdx.y;
   const int out_c = blockIdx.z;
-  assert(gridDim.x == filter_width);
-  assert(gridDim.z == out_channel);
+
+  const int in_c = out_c / depth_multiplier;
+  const int dm = out_c % depth_multiplier;
   const int filter_backprop_offset =
-      ((filter_h * filter_width) + filter_w) * out_channel + out_c;
+      (((filter_h * filter_width) + filter_w) * in_depth + in_c) *
+      depth_multiplier + dm;
   const int out_spatial_size = out_height * out_width;
 
+  T partial_sum = 0.;
   for (int batch = 0; batch < batch_num; batch++) {
-    const int input_offset_temp = (batch * in_channel + out_c) * in_height;
+    const int input_offset_temp = (batch * in_depth + in_c) * in_height;
     const int output_backprop_offset_temp =
-        (batch * out_channel + out_c) * out_height;
+        (batch * out_depth + out_c) * out_height;
     for (int i = threadIdx.x; i < out_spatial_size; i += blockDim.x) {
       const int out_col = i % out_width;
       const int out_row = i / out_width;
@@ -188,6 +192,16 @@ template <typename T> void init_array(T *dev_ptr, int n) {
   delete[] host_ptr;
 }
 
+template <typename T> void init_array(T *dev_ptr, int n, float v) {
+  T *host_ptr = new T[n];
+  for (int i = 0; i < n; i++) {
+    host_ptr[i] = v;
+  }
+  checkCUDA(
+      cudaMemcpy(dev_ptr, host_ptr, sizeof(T) * n, cudaMemcpyHostToDevice));
+  delete[] host_ptr;
+}
+
 template <typename T>
 void print_array(T *dev_ptr, int n, const std::string &prompt) {
   std::cout << prompt << std::endl;
@@ -220,8 +234,13 @@ int main(int argc, char **argv) {
     dargs[11] = atoi(argv[3]);
     dargs[12] = atoi(argv[4]);
   }
-  printf("XXX N,H,W,C,R,S: %d %d %d %d %d %d\n", dargs[0], dargs[1], dargs[2],
-         dargs[3], dargs[4], dargs[5]);
+  if (argc > 8) {
+    dargs[6] = atoi(argv[7]);
+    dargs[12] = atoi(argv[8]);
+  }
+  printf("XXX N,H,W,C,R,S,Multipler,K: %d %d %d %d %d %d %d %d\n",
+         dargs[0], dargs[1], dargs[2], dargs[3], dargs[4], dargs[5], dargs[6],
+         dargs[12]);
 
   DepthwiseArgs args;
   args.batch = dargs[0];
@@ -241,7 +260,7 @@ int main(int argc, char **argv) {
   int num_out_backprop =
       args.batch * args.out_depth * args.out_rows * args.out_cols;
   int num_input = args.batch * args.in_depth * args.in_rows * args.in_cols;
-  int num_filter_backprop = args.in_depth * args.filter_rows * args.filter_cols;
+  int num_filter_backprop = args.in_depth * args.filter_rows * args.filter_cols * args.depth_multiplier;
 
   int out_backprop_bytes = sizeof(float) * num_out_backprop;
   int input_bytes = sizeof(float) * num_input;
@@ -257,6 +276,8 @@ int main(int argc, char **argv) {
 
   init_array(out_backprop, num_out_backprop);
   init_array(input, num_input);
+  // TODO really need this?
+  init_array(filter_backprop, num_filter_backprop, 0.0);
 
   auto device_fn = DepthwiseConv2dBackwardFilterKernel<float>;
   dim3 blocks = dim3(args.filter_cols, args.filter_rows, args.out_depth);
