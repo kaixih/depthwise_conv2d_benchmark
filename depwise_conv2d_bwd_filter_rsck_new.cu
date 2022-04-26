@@ -11,6 +11,7 @@
     }                                                       \
   }
 
+static constexpr int32_t kWarpSize = 32;
 struct DepthwiseArgs {
   // Input layer dimensions
   int batch;
@@ -136,6 +137,7 @@ __global__ void __launch_bounds__(512, 2)
                                         const T *__restrict__ out_backprop,
                                         const T *__restrict__ input,
                                         T *__restrict__ filter_backprop) {
+  extern __shared__ T local[];
   const int batch_num = args.batch;
   const int in_depth = args.in_depth;
   const int in_height = args.in_rows;
@@ -195,8 +197,14 @@ __global__ void __launch_bounds__(512, 2)
 
   T val = WarpReduce(temp_storage).Sum(partial_sum);
   if (cub::LaneId() == 0) {
+    local[threadIdx.x / kWarpSize] = val;
+  }
+  __syncthreads();
+  if (threadIdx.x == 0) {
     T *addr = filter_backprop + filter_backprop_offset;
-    GpuAtomicAdd(addr, val);
+    for (int i = 0; i < blockDim.x / kWarpSize; i++) {
+      *addr += local[i];
+    }
   }
 }
 
@@ -305,8 +313,8 @@ int main(int argc, char **argv) {
 
   auto launcher = [&](int repeats) {
     for (int i = 0; i < repeats; i++) {
-      device_fn<<<blocks, threads>>>(args, out_backprop, input,
-                                     filter_backprop);
+      device_fn<<<blocks, threads, threads.x / kWarpSize * sizeof(float)>>>(
+          args, out_backprop, input, filter_backprop);
     }
   };
   // warmup
