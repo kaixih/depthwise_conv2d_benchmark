@@ -10,7 +10,7 @@ struct FastDividerUint32 {
     // division. For detailed information see:
     //   https://ridiculousfish.com/blog/posts/labor-of-division-episode-i.html
     //
-    // Basics: the fast int division is formatted as:
+    // Basics: the int division can be transformed to:
     //   n / d = (m * n) / 2^(32 + s)
     // where 'n' is the numerator and 'd' is the divisor. For a given 'd', we
     // need to find a magic number 'm' and a shift 's'.
@@ -25,20 +25,13 @@ struct FastDividerUint32 {
 
     // (2). The magic number 'm' is defined as:
     //    m = 2^(32 + s) / d + 1
-    // Note, the last one is to round up (which will be rounded down later by
+    // Note, the last '1' is to round up (which will be rounded down later by
     // dividing two). In practice, however, 'm' is a 33-bit value. To fit the
     // 32-bit range, we introduce:
     //   magic = m - 2^32, where magic is guaranteed to be 32bit.
     //         = 2^(32 + s) / d - 2^32 + 1
     //         = 2^32 * 2^s / d - 2^32 * d / d + 1
     //         = (2^32 * (2^s - d)) / d + 1
-    // Then:
-    //   n / d = (m * n) / 2^(32 + s)
-    //         = (magic + 2^32) * n / 2^(32 + s)
-    //         = (magic * n) / 2^(32 + s) + n / 2^s
-    //         = (magic * n) / 2^32 / 2^s + n / 2^s
-    //         = (magic * n / 2^32 + n) / 2^s
-    // We will use this formula in the override division function.
     uint64_t m = (0x100000000ull * ((0x1ull << shift) - divisor)) / divisor + 1;
     magic = static_cast<uint32_t>(m);
   }
@@ -54,7 +47,12 @@ struct FastDividerUint32 {
 
 inline EIGEN_DEVICE_FUNC uint32_t operator/(const uint32_t n,
                                             const FastDividerUint32& fdiv) {
-  // q is the most significant 32 bits of the product of n and fdiv.magic.
+  // (3). We will use the 32-bit 'magic' in the formula:
+  //   n / d = (m * n) / 2^(32 + s)
+  //         = (magic + 2^32) * n / 2^(32 + s)
+  //         = (magic * n) / 2^(32 + s) + n / 2^s
+  //         = (magic * n) / 2^32 / 2^s + n / 2^s
+  //         = (magic * n / 2^32 + n) / 2^s
 #if defined(__CUDA_ARCH__)
   uint32_t q = __umulhi(n, fdiv.magic);
 #else
