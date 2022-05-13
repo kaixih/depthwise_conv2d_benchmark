@@ -13,6 +13,7 @@ all:
 	#nvcc ${RSCK_FILTER}.cu -o ${RSCK_FILTER}.out ${NVCC_OPTS}
 	#nvcc ${RSCK_FILTER}.cu -o ${RSCK_FILTER}_debug.out ${NVCC_OPTS} -DDEBUG_NON_ATOMIC
 	#nvcc ${RSCK_FILTER_NEW}.cu -o ${RSCK_FILTER_NEW}.out ${NVCC_OPTS}
+	nvcc ${FWD_NCHW}.cu -o ${FWD_NCHW}_fast.out ${NVCC_OPTS} -DUSE_FAST_INTDIV
 	nvcc ${FWD_NCHW}.cu -o ${FWD_NCHW}.out ${NVCC_OPTS}
 
 clean:
