@@ -1,5 +1,6 @@
 #include <cub/cub.cuh>
 #include <iostream>
+#include "int_divider.h"
 
 #define checkCUDA(expression)                               \
   {                                                         \
@@ -147,8 +148,8 @@ __global__ void __launch_bounds__(512, 2)
   const int pad_width = args.pad_cols;
   const int out_depth = args.out_depth;
   const int out_height = args.out_rows;
-  const int out_width = args.out_cols;
-  const int depth_multiplier = args.depth_multiplier;
+  const FastDividerUint32 out_width(args.out_cols);
+  const FastDividerUint32 depth_multiplier(args.depth_multiplier);
   assert(gridDim.x == filter_width);
   assert(gridDim.z == out_depth);
 
