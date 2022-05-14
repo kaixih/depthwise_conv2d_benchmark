@@ -1,6 +1,5 @@
 #!/bin/bash
 
-#make
 PRE=depwise_conv2d
 SUF=nchw
 EXEC_FILES=(
