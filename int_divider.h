@@ -1,4 +1,10 @@
 #define EIGEN_DEVICE_FUNC __host__ __device__
+struct DivModPair {
+  uint32_t div;
+  uint32_t mod;
+  inline EIGEN_DEVICE_FUNC DivModPair(uint32_t d, uint32_t m)
+      : div(d), mod(m) {}
+};
 
 struct FastDividerUint32 {
   inline EIGEN_DEVICE_FUNC FastDividerUint32(uint32_t d) : divisor(d) {
@@ -75,4 +81,11 @@ inline EIGEN_DEVICE_FUNC uint32_t operator/(const int n,
 inline EIGEN_DEVICE_FUNC uint32_t operator%(const int n,
                                             const FastDividerUint32& fdiv) {
   return static_cast<uint32_t>(n) % fdiv;
+}
+
+inline EIGEN_DEVICE_FUNC DivModPair div_mod(const int n,
+                                            const FastDividerUint32& fdiv) {
+  uint32_t d = n / fdiv;
+  uint32_t m = n - d * fdiv;
+  return DivModPair(d, m);
 }

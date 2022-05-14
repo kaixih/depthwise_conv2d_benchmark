@@ -32,14 +32,13 @@ __global__ void __launch_bounds__(1024, 2)
   const int pad_height = args.pad_rows;
   const int pad_width = args.pad_cols;
 #ifdef USE_FAST_INTDIV
-  const FastDividerUint32 out_height(args.out_rows);
-  const FastDividerUint32 out_width(args.out_cols);
   const FastDividerUint32 out_depth(args.out_depth);
+  const FastDividerUint32 out_height(args.out_rows);
 #else
-  const int out_height = args.out_rows;
-  const int out_width = args.out_cols;
   const int out_depth = args.out_depth;
+  const int out_height = args.out_rows;
 #endif
+  const int out_width = args.out_cols;
 
   GPU_1D_KERNEL_LOOP(thread_id, num_outputs) {
     // Compute the indexes of this thread in the output.
