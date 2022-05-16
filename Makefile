@@ -7,6 +7,7 @@ NVCC_OPTS=-gencode arch=compute_86,code=sm_86 \
 					-gencode 'arch=compute_70,code="sm_70,compute_70"'
 
 all:
+	nvcc unit_test.cu -o unit_test.out ${NVCC_OPTS}
 	nvcc ${FWD_NCHW}.cu -o ${FWD_NCHW}_fast.out ${NVCC_OPTS} -DUSE_FAST_INTDIV
 	nvcc ${FWD_NCHW}.cu -o ${FWD_NCHW}.out ${NVCC_OPTS}
 	nvcc ${BWD_INPUT_NCHW}.cu -o ${BWD_INPUT_NCHW}_fast.out ${NVCC_OPTS} -DUSE_FAST_INTDIV
