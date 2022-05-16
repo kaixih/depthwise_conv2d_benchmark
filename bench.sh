@@ -10,6 +10,7 @@ TARGETS=(
     "${PRE}_bwd_filter_${SUF}_fast"
     "${PRE}_bwd_input_${SUF}_fast"
 )
+LOGS=()
 
 for INDEX in ${!TARGETS[@]}; do
   OUT="$(mktemp out_XXX.txt)"
@@ -40,13 +41,14 @@ for INDEX in ${!TARGETS[@]}; do
   done
 
   grep 'LOG: time' $OUT | awk '{print $4}' > log_tmp_$INDEX.txt
+  LOGS+=("log_tmp_$INDEX.txt")
   rm -rf $OUT
 done
 
 LOG="$(mktemp log_XXX.txt)"
-paste log_tmp_{0..5}.txt -d ',' > $LOG
+paste ${LOGS[@]} -d ',' > $LOG
 
 echo "Log is stored in $LOG"
-rm -rf log_tmp_{0..5}.txt
+rm -rf $LOGS.txt
 
 
