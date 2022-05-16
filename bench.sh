@@ -2,20 +2,18 @@
 
 PRE=depwise_conv2d
 SUF=nchw
-EXEC_FILES=(
+TARGETS=(
     "${PRE}_fwd_${SUF}"
     "${PRE}_bwd_filter_${SUF}"
     "${PRE}_bwd_input_${SUF}"
     "${PRE}_fwd_${SUF}_fast"
     "${PRE}_bwd_filter_${SUF}_fast"
     "${PRE}_bwd_input_${SUF}_fast"
-  )
+)
 
-
-LOG="$(mktemp log_XXX.txt)"
-for EXEC in ${EXEC_FILES[@]}; do
+for INDEX in ${!TARGETS[@]}; do
   OUT="$(mktemp out_XXX.txt)"
-  BIN=$EXEC.out
+  BIN=${TARGETS[$INDEX]}.out
   
   ## Varying N
   for (( i = 1 ; i < 20 ; i+=2 ))
@@ -40,17 +38,15 @@ for EXEC in ${EXEC_FILES[@]}; do
   do
     ./$BIN 1 128 128 144 $i $i |& tee -a $OUT
   done
-  TMP="$(mktemp tmp_XXX.txt)"
-  grep 'LOG: time' $OUT | awk '{print $4}' > $TMP
-  LOG_TMP="$(mktemp log_tmp_XXX.txt)"
-  paste $LOG $TMP -d ',' > $LOG_TMP
-  mv $LOG_TMP $LOG
-  rm $TMP $OUT
+
+  grep 'LOG: time' $OUT | awk '{print $4}' > log_tmp_$INDEX.txt
+  rm -rf $OUT
 done
 
-LOG_TMP="$(mktemp log_tmp_XXX.txt)"
-sed 's/^,//' $LOG > $LOG_TMP
-mv $LOG_TMP $LOG
+LOG="$(mktemp log_XXX.txt)"
+paste log_tmp_{0..5}.txt -d ',' > $LOG
+
 echo "Log is stored in $LOG"
+rm -rf log_tmp_{0..5}.txt
 
 
