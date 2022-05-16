@@ -11,9 +11,9 @@ __global__ void __launch_bounds__(640, 2)
         const T* __restrict__ filter, T* __restrict__ in_backprop,
         int num_in_backprop) {
 #ifdef USE_FAST_INTDIV
-  const FastDividerUint32 in_height(args.in_rows);
-  const FastDividerUint32 in_width(args.in_cols);
-  const FastDividerUint32 in_depth(args.in_depth);
+  const FastDividerUint32 in_height = args.in_rows;
+  const FastDividerUint32 in_width = args.in_cols;
+  const FastDividerUint32 in_depth = args.in_depth;
 #else
   const int in_height = args.in_rows;
   const int in_width = args.in_cols;
@@ -26,7 +26,7 @@ __global__ void __launch_bounds__(640, 2)
   const int depth_multiplier =
       kKnownDepthMultiplier < 0 ? args.depth_multiplier : kKnownDepthMultiplier;
 #ifdef USE_FAST_INTDIV
-  const FastDividerUint32 stride(args.stride);
+  const FastDividerUint32 stride = args.stride;
 #else
   const int stride = args.stride;
 #endif

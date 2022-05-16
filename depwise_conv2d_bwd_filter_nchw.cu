@@ -21,8 +21,8 @@ __global__ void __launch_bounds__(512, 2)
   const int out_depth = args.out_depth;
   const int out_height = args.out_rows;
 #ifdef USE_FAST_INTDIV
-  const FastDividerUint32 out_width(args.out_cols);
-  const FastDividerUint32 depth_multiplier(args.depth_multiplier);
+  const FastDividerUint32 out_width = args.out_cols;
+  const FastDividerUint32 depth_multiplier = args.depth_multiplier;
 #else
   const int out_width = args.out_cols;
   const int depth_multiplier = args.depth_multiplier;

@@ -11,7 +11,10 @@ struct FastDividerUint32 {
     // We assume that the divisor is at most INT32_MAX, which is enough for our
     // purpose when d is any positive int value.
     assert(divisor >= 1 && divisor <= INT32_MAX);
-
+    update_magic();
+  }
+  
+  inline EIGEN_DEVICE_FUNC void update_magic() {
     // The fast int division can substitute fast multiplication for slow
     // division. For detailed information see:
     //   https://ridiculousfish.com/blog/posts/labor-of-division-episode-i.html
@@ -40,6 +43,12 @@ struct FastDividerUint32 {
     //         = (2^32 * (2^s - d)) / d + 1
     uint64_t m = (0x100000000ull * ((0x1ull << shift) - divisor)) / divisor + 1;
     magic = static_cast<uint32_t>(m);
+  }
+
+  inline EIGEN_DEVICE_FUNC FastDividerUint32& operator=(uint32_t d) {
+    this->divisor = d;
+    update_magic();
+    return *this;
   }
 
   inline EIGEN_DEVICE_FUNC operator uint32_t() const {

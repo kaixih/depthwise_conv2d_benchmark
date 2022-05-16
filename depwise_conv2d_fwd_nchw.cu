@@ -22,8 +22,8 @@ __global__ void __launch_bounds__(1024, 2)
   const int filter_width =
       kKnownFilterWidth < 0 ? args.filter_cols : kKnownFilterWidth;
 #ifdef USE_FAST_INTDIV
-  const FastDividerUint32 depth_multiplier(kKnownDepthMultiplier < 0 ?
-      args.depth_multiplier : kKnownDepthMultiplier);
+  const FastDividerUint32 depth_multiplier =
+      kKnownDepthMultiplier < 0 ? args.depth_multiplier : kKnownDepthMultiplier;
 #else
   const int depth_multiplier =
       kKnownDepthMultiplier < 0 ? args.depth_multiplier : kKnownDepthMultiplier;
@@ -32,8 +32,8 @@ __global__ void __launch_bounds__(1024, 2)
   const int pad_height = args.pad_rows;
   const int pad_width = args.pad_cols;
 #ifdef USE_FAST_INTDIV
-  const FastDividerUint32 out_depth(args.out_depth);
-  const FastDividerUint32 out_height(args.out_rows);
+  const FastDividerUint32 out_depth = args.out_depth;
+  const FastDividerUint32 out_height = args.out_rows;
 #else
   const int out_depth = args.out_depth;
   const int out_height = args.out_rows;
