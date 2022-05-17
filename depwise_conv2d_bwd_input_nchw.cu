@@ -25,11 +25,7 @@ __global__ void __launch_bounds__(640, 2)
       kKnownFilterWidth < 0 ? args.filter_cols : kKnownFilterWidth;
   const int depth_multiplier =
       kKnownDepthMultiplier < 0 ? args.depth_multiplier : kKnownDepthMultiplier;
-#ifdef USE_FAST_INTDIV
-  const FastDividerUint32 stride = args.stride;
-#else
   const int stride = args.stride;
-#endif
   const int pad_height = args.pad_rows;
   const int pad_width = args.pad_cols;
   const int out_height = args.out_rows;

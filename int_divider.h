@@ -46,6 +46,7 @@ struct FastDividerUint32 {
   }
 
   inline EIGEN_DEVICE_FUNC FastDividerUint32& operator=(uint32_t d) {
+    assert(divisor >= 1 && divisor <= INT32_MAX);
     this->divisor = d;
     update_magic();
     return *this;
