@@ -1,11 +1,8 @@
-# depthwise_conv2d_benchmark
+# Depthwise Conv2d Benchmark with Fast Int Division
 
 ## Description
-In this benchmark, we have two implementations for depthwise conv2d backprop
-w.r.t filter. The difference is the filter format: KCRS or RSCK, where
-K=output_channels, C=input_channels, R=filter_height, S=filter_width. The KCRS
-is the default filter format for frameworks like PyTorch and Mxnet, while RSCK
-is the default for Tensorflow.
+We benchmark the depthwise conv2d implementations of Tensorflow with the fast
+integer division for index computation.
 
 ## How to Use:
 The `make` will generate four executables, two for each format mentioned above:
@@ -15,10 +12,12 @@ output, which is only served for debugging purpose and will lead to wrong
 results.
 
 ```bash
+The benchmark script will run three convolutions (conv2d forward, conv2d
+backprop w.r.t input, and conv2d backprop w.r.t filter) with the fast int
+division turned on and off respectively.
 $ make
-$ bash bench.sh depwise_conv2d_bwd_filter_kcrs.out
+$ bash bench.sh
 ...
-XXX time(ms): 1.128837
-...
+Log is stored in log_xxx.txt
 ```
 
